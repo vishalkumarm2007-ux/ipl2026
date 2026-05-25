@@ -1,144 +1,127 @@
-#include<stdio.h>
+#include <stdio.h>
 
-union decision{
-unsigned char flags;
-
-struct field{
-int your_choice:1;
-int your_mothers_choice:1;
-int your_fathers_choice:1;
-int socially_acceptable:1;
-int financially_viable:1;
-int do_you_have_aptitude:1;
-int do_you_like_it:1;
-int decision:1;
-}field;
+union decision {
+    unsigned char flags;
+    struct {
+        unsigned int your_choice:1;
+        unsigned int your_mothers_choice:1;
+        unsigned int your_fathers_choice:1;
+        unsigned int socially_acceptable:1;
+        unsigned int financially_viable:1;
+        unsigned int do_you_aptitude:1;
+        unsigned int do_you_likeit:1;
+        unsigned int decision:1;
+    } bits;
 };
 
 union decision input();
 void make_decision(union decision *d);
-void print_decision(union decision d);
-void print_conclusion_based_on_flags(union decision d);
+void print_decsion(union decision d);
+void print_conclusion_based_on_flags( union decision d);
 
-int main(){
-union decision d;
+static unsigned int ask_bit(const char *prompt)
+{
+    unsigned int value = 0;
+    int read = 0;
 
-d=input();
+    do {
+        printf("%s (0 or 1): ", prompt);
+        read = scanf("%u", &value);
+        while (getchar() != '\n') {
+            ;
+        }
+    } while (read != 1 || (value != 0 && value != 1));
 
-make_decision(&d);
-
-print_decision(d);
-
-print_conclusion_based_on_flags(d);
-
-return 0;
+    return value;
 }
 
-union decision input(){
-union decision d;
-
-d.flags=0;
-
-printf("Enter 1 for YES and 0 for NO\n");
-
-printf("Does your mother support it? ");
-scanf("%d",&d.field.your_mothers_choice);
-
-printf("Does your father support it? ");
-scanf("%d",&d.field.your_fathers_choice);
-
-printf("Is it socially acceptable? ");
-scanf("%d",&d.field.socially_acceptable);
-
-printf("Is it financially viable? ");
-scanf("%d",&d.field.financially_viable);
-
-printf("Do you have aptitude for it? ");
-scanf("%d",&d.field.do_you_have_aptitude);
-
-printf("Do you like it? ");
-scanf("%d",&d.field.do_you_like_it);
-
-return d;
+int main(void)
+{
+    union decision d = input();
+    make_decision(&d);
+    print_decsion(d);
+    print_conclusion_based_on_flags(d);
+    return 0;
 }
 
-void make_decision(union decision *d){
+union decision input()
+{
+    union decision d = { .flags = 0 };
 
-d->field.your_choice=
-d->field.do_you_have_aptitude&&
-d->field.do_you_like_it;
+    puts("Please answer the following questions to build your decision profile.");
+    d.bits.your_choice = ask_bit("Do you want it?");
+    d.bits.your_mothers_choice = ask_bit("Does your mother want it for you?");
+    d.bits.your_fathers_choice = ask_bit("Does your father want it for you?");
+    d.bits.socially_acceptable = ask_bit("Is it socially acceptable?");
+    d.bits.financially_viable = ask_bit("Is it financially viable?");
+    d.bits.do_you_aptitude = ask_bit("Do you have the aptitude for it?");
+    d.bits.do_you_likeit = ask_bit("Do you actually like it?");
 
-d->field.decision=
-d->field.your_choice&&
-d->field.financially_viable&&
-(
-d->field.your_mothers_choice||
-d->field.your_fathers_choice
-)&&
-d->field.socially_acceptable;
+    return d;
 }
 
-void print_decision(union decision d){
-
-printf("\n=====DECISION REPORT=====\n");
-
-printf("Mother's opinion:%s\n",
-d.field.your_mothers_choice?"Supportive":"Not supportive");
-
-printf("Father's opinion:%s\n",
-d.field.your_fathers_choice?"Supportive":"Not supportive");
-
-printf("Social acceptance:%s\n",
-d.field.socially_acceptable?"Acceptable":"Questionable");
-
-printf("Financial viability:%s\n",
-d.field.financially_viable?"Viable":"Risky");
-
-printf("Your aptitude:%s\n",
-d.field.do_you_have_aptitude?"Good":"Weak");
-
-printf("Your interest:%s\n",
-d.field.do_you_like_it?"You like it":"You dislike it");
-
-printf("Your internal choice:%s\n",
-d.field.your_choice?"Positive":"Negative");
-
-printf("\nFINAL DECISION:%s\n",
-d.field.decision?"GO AHEAD":"RECONSIDER");
+void make_decision(union decision *d)
+{
+    d->bits.decision =
+        d->bits.your_choice &&
+        ((d->bits.your_mothers_choice && d->bits.your_fathers_choice)
+         || d->bits.socially_acceptable) &&
+        d->bits.financially_viable &&
+        d->bits.do_you_aptitude &&
+        d->bits.do_you_likeit;
 }
 
-void print_conclusion_based_on_flags(union decision d){
+void print_decsion(union decision d)
+{
+    puts("\nDecision narrative:");
+    printf("  You want it: %s\n", d.bits.your_choice ? "yes" : "no");
+    printf("  Mother's opinion: %s\n", d.bits.your_mothers_choice ? "support" : "no support");
+    printf("  Father's opinion: %s\n", d.bits.your_fathers_choice ? "support" : "no support");
+    printf("  Socially acceptable: %s\n", d.bits.socially_acceptable ? "yes" : "no");
+    printf("  Financially viable: %s\n", d.bits.financially_viable ? "yes" : "no");
+    printf("  Aptitude: %s\n", d.bits.do_you_aptitude ? "yes" : "no");
+    printf("  Do you like it: %s\n", d.bits.do_you_likeit ? "yes" : "no");
 
-printf("\n=====FLAGS ANALYSIS=====\n");
-
-printf("Raw flags value=%u\n",d.flags);
-
-if(d.flags==255){
-printf("Perfect alignment.\n");
+    if (d.bits.decision) {
+        puts("  Final decision: yes. The conditions align well enough to move forward.");
+    } else {
+        puts("  Final decision: no. At least one required condition failed, so it's safer to wait.");
+    }
 }
-else if(d.flags>200){
-printf("Very strong positive indicators.\n");
+
+static unsigned int count_bits(unsigned char value)
+{
+    unsigned int count = 0;
+
+    while (value) {
+        count += value & 1;
+        value >>= 1;
+    }
+
+    return count;
 }
-else if(d.flags>100){
-printf("Mixed signals.\n");
-}
-else{
-printf("Weak support overall.\n");
-}
 
-printf("Binary pattern interpretation:\n");
+void print_conclusion_based_on_flags( union decision d)
+{
+    unsigned char flags = d.flags;
+    unsigned int set_bits = count_bits(flags);
 
-if(d.field.decision)
-printf("-Final decision bit is ON.\n");
-else
-printf("-Final decision bit is OFF.\n");
+    printf("\nFlags interpretation:\n");
+    printf("  Raw flags value: 0x%02X (%u)\n", flags, flags);
+    printf("  This value encodes your seven inputs plus the computed decision bit.\n");
+    printf("  Active factors: %u out of 8 bits set.\n", set_bits);
 
-if(d.field.your_choice)
-printf("-Your heart supports this choice.\n");
+    if (flags == 0) {
+        puts("  Interpretation: no inputs were positive; the profile is completely neutral.");
+    } else if (flags == 0xFF) {
+        puts("  Interpretation: every reason and the final decision are positive. A unanimous thumbs-up.");
+    } else if (d.bits.decision) {
+        puts("  Interpretation: the decision bit is set; the overall profile is supportive.");
+    } else {
+        puts("  Interpretation: the profile has mixed signals. Some influences are positive, but not enough to seal the decision.");
+    }
 
-if(!d.field.financially_viable)
-printf("-Financial risk detected.\n");
-
-if(!d.field.socially_acceptable)
-printf("-Possible social resistance.\n");
+    if ((flags & 1) && (flags & 0x80)) {
+        puts("  Extra note: you want it personally and the computed conclusion also agrees.");
+    }
 }
